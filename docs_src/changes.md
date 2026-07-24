@@ -11,6 +11,29 @@ Install extensions atomically, never overwrite in place.
 
 Substitute `station_type` if the hardware driver does not offer `hardware_name`. 
 
+Fix Vantage `weectl device --set-retransmit`: EEPROM 0x18 (RE_TRANSMIT_TX)
+takes the ID number to retransmit on (0=off, 1=ID1, ..., per the Davis serial
+protocol doc), but the driver wrote a bitmask, so `--set-retransmit=on,3`
+programmed the console to retransmit on ID 4, and channels 5-8 wrote
+out-of-range values.  The retransmit column of `weectl device --info` decoded
+0x18 the same wrong way and could show the wrong channel(s) as retransmitting.
+
+Fix Vantage LOOP2 decoding of dewpoint, heatindex, windchill, and THSW: only
+the documented dash value (exactly 255) now means missing data, so a
+legitimate reading of -1°F is no longer dropped.
+
+Fix Vantage LOOP2 windGust10 dash value: the field dashes as 0xFFFF (like the
+LOOP2 average wind speeds), not 0xFF, so a dashed gust no longer decodes as a
+65535 mph gust.
+
+Vantage `weectl device --set-offset` now accepts negative humidity offsets
+(the console supports -100 through 100).
+
+Vantage `weectl device --set-transmitter-type` now rejects extra
+temperature/humidity IDs of 8; only extraTemp1-7/extraHumid1-7 exist.
+
+Removed stray print statements from the Vantage console wake-up retry path.
+
 
 ### 5.4.0 06/16/2026
 
