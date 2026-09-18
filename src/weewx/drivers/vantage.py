@@ -851,7 +851,8 @@ class Vantage(weewx.drivers.AbstractDevice):
                 self.port.send_data(b'GETTIME\n')
                 # ... get the binary data. No prompt, only one try:
                 _buffer = self.port.get_data_with_crc16(8, max_tries=1)
-                (sec, minute, hr, day, mon, yr, unused_crc) = struct.unpack("<bbbbbbH", _buffer)
+                # The year byte is unsigned (see setTime).
+                (sec, minute, hr, day, mon, yr, unused_crc) = struct.unpack("<bbbbbBH", _buffer)
 
                 return datetime.datetime(yr + 1900, mon, day, hr, minute, sec)
 
@@ -875,8 +876,9 @@ class Vantage(weewx.drivers.AbstractDevice):
                 # and 0.25 for transmission delay
                 newtime_tt = time.localtime(int(time.time() + 0.75))
 
-                # The Davis expects the time in reversed order, and the year is since 1900
-                _buffer = struct.pack("<bbbbbb",
+                # The Davis expects the time in reversed order, and the year is since 1900.
+                # The year byte is UNSIGNED: 2028 - 1900 does not fit a signed one.
+                _buffer = struct.pack("<bbbbbB",
                                       newtime_tt[5], newtime_tt[4], newtime_tt[3], newtime_tt[2],
                                       newtime_tt[1], newtime_tt[0] - 1900)
 

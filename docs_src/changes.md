@@ -95,6 +95,12 @@ temperature/humidity IDs of 8; only extraTemp1-7/extraHumid1-7 exist.
 
 Removed stray print statements from the Vantage console wake-up retry path.
 
+Fix reading and setting the Vantage console clock from 2028-01-01. The
+console's year byte (years since 1900) was packed and unpacked as a signed
+byte, which holds no more than 127: `setTime` would have raised a
+`struct.error`, which `StdTimeSynch` does not catch, and `getTime` would have
+read the console's year as 1772.
+
 
 ### 5.4.0 16-Jun-2026
 
