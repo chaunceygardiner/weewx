@@ -1,6 +1,44 @@
 WeeWX change history
 --------------------
 
+### 5.5.3 MM/DD/YYYY
+
+Fix Vantage `weectl device --set-retransmit`: EEPROM 0x18 (RE_TRANSMIT_TX)
+takes the ID number to retransmit on (0=off, 1=ID1, ..., per the Davis serial
+protocol doc), but the driver wrote a bitmask, so `--set-retransmit=on,3`
+programmed the console to retransmit on ID 4, and channels 5-8 wrote
+out-of-range values.  The retransmit column of `weectl device --info` decoded
+0x18 the same wrong way and could show the wrong channel(s) as retransmitting.
+
+Fix Vantage LOOP2 decoding of dewpoint, heatindex, windchill, and THSW: only
+the documented dash value (exactly 255) now means missing data, so a
+legitimate reading of -1°F is no longer dropped.
+
+Fix Vantage LOOP2 windGust10 dash value: the field dashes as 0xFFFF (like the
+LOOP2 average wind speeds), not 0xFF, so a dashed gust no longer decodes as a
+65535 mph gust.
+
+Vantage `weectl device --set-offset` now accepts negative humidity offsets
+(the console supports -100 through 100).
+
+Vantage `weectl device --set-transmitter-type` now rejects extra
+temperature/humidity IDs of 8; only extraTemp1-7/extraHumid1-7 exist.
+
+Removed stray print statements from the Vantage console wake-up retry path.
+
+Fix reading and setting the Vantage console clock from 2028-01-01. The
+console's year byte (years since 1900) was packed and unpacked as a signed
+byte, which holds no more than 127: `setTime` would have raised a
+`struct.error`, which `StdTimeSynch` does not catch, and `getTime` would have
+read the console's year as 1772.
+
+Fix the Vantage ISS guess when `iss_id` is not set: only channels the console
+is listening to are now considered.  An unconfigured channel's transmitter
+type reads as 0, which decodes as an ISS, so a free channel numbered below the
+real ISS was picked and `rxCheckPercent` was gauged against a transmitter that
+does not exist.
+
+
 ### 5.5.2 23-Sep-2026
 
 Fixed the version check implementation for generating maintainer version of
@@ -71,41 +109,6 @@ Install extensions atomically, never overwrite in place.
 [PR #1104](https://github.com/weewx/weewx/pull/1104). Thanks to user John K!
 
 Substitute `station_type` if the hardware driver does not offer `hardware_name`. 
-
-Fix Vantage `weectl device --set-retransmit`: EEPROM 0x18 (RE_TRANSMIT_TX)
-takes the ID number to retransmit on (0=off, 1=ID1, ..., per the Davis serial
-protocol doc), but the driver wrote a bitmask, so `--set-retransmit=on,3`
-programmed the console to retransmit on ID 4, and channels 5-8 wrote
-out-of-range values.  The retransmit column of `weectl device --info` decoded
-0x18 the same wrong way and could show the wrong channel(s) as retransmitting.
-
-Fix Vantage LOOP2 decoding of dewpoint, heatindex, windchill, and THSW: only
-the documented dash value (exactly 255) now means missing data, so a
-legitimate reading of -1°F is no longer dropped.
-
-Fix Vantage LOOP2 windGust10 dash value: the field dashes as 0xFFFF (like the
-LOOP2 average wind speeds), not 0xFF, so a dashed gust no longer decodes as a
-65535 mph gust.
-
-Vantage `weectl device --set-offset` now accepts negative humidity offsets
-(the console supports -100 through 100).
-
-Vantage `weectl device --set-transmitter-type` now rejects extra
-temperature/humidity IDs of 8; only extraTemp1-7/extraHumid1-7 exist.
-
-Removed stray print statements from the Vantage console wake-up retry path.
-
-Fix reading and setting the Vantage console clock from 2028-01-01. The
-console's year byte (years since 1900) was packed and unpacked as a signed
-byte, which holds no more than 127: `setTime` would have raised a
-`struct.error`, which `StdTimeSynch` does not catch, and `getTime` would have
-read the console's year as 1772.
-
-Fix the Vantage ISS guess when `iss_id` is not set: only channels the console
-is listening to are now considered.  An unconfigured channel's transmitter
-type reads as 0, which decodes as an ISS, so a free channel numbered below the
-real ISS was picked and `rxCheckPercent` was gauged against a transmitter that
-does not exist.
 
 
 ### 5.4.0 16-Jun-2026
