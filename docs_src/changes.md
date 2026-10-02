@@ -101,6 +101,12 @@ byte, which holds no more than 127: `setTime` would have raised a
 `struct.error`, which `StdTimeSynch` does not catch, and `getTime` would have
 read the console's year as 1772.
 
+Fix the Vantage ISS guess when `iss_id` is not set: only channels the console
+is listening to are now considered.  An unconfigured channel's transmitter
+type reads as 0, which decodes as an ISS, so a free channel numbered below the
+real ISS was picked and `rxCheckPercent` was gauged against a transmitter that
+does not exist.
+
 
 ### 5.4.0 16-Jun-2026
 

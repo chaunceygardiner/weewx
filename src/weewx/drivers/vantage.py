@@ -1487,28 +1487,32 @@ class Vantage(weewx.drivers.AbstractDevice):
         self.wind_cup_size    = Vantage.wind_cup_dict[self.wind_cup_type]
         self.rain_bucket_size = Vantage.rain_bucket_dict[self.rain_bucket_type]
 
-        # Try to guess the ISS ID for gauging reception strength.
+        # Try to guess the ISS ID for gauging reception strength.  Only
+        # channels the console is actually listening to are considered: an
+        # unconfigured channel's type nibble can read 0, which decodes as
+        # 'iss' (transmitter_type_dict[0]), so a free channel below the real
+        # ISS would otherwise win and rxCheckPercent would be gauged against
+        # a transmitter that is not the ISS.  The listen bits come from
+        # USETX (EEPROM 0x17), which getStnTransmitters has already read.
         if self.iss_id is None:
             stations = self.getStnTransmitters()
-            # Wind retransmitter is the best candidate.
-            for station_id in range(0, 8):
-                if stations[station_id]['transmitter_type'] == 'wind':
-                    self.iss_id = station_id + 1  # Origin 1.
-                    break
-            else:
-                # ISS is next best candidate.
+
+            def listening_for(wanted):
+                """The channel (origin 1) carrying `wanted`, or None.  The
+                list is indexed by channel, so it is never compacted: the
+                listen bit is tested in place."""
                 for station_id in range(0, 8):
-                    if stations[station_id]['transmitter_type'] == 'iss':
-                        self.iss_id = station_id + 1  # Origin 1.
-                        break
-                else:
-                    # On Vue, can use VP2 ISS, which reports as "rain"
-                    for station_id in range(0, 8):
-                        if stations[station_id]['transmitter_type'] == 'rain':
-                            self.iss_id = station_id + 1  # Origin 1.
-                            break
-                    else:
-                        self.iss_id = 1  # Pick a reasonable default.
+                    station = stations[station_id]
+                    if (station['listen'] == 'active'
+                            and station['transmitter_type'] == wanted):
+                        return station_id + 1  # Origin 1.
+                return None
+
+            # Wind retransmitter is the best candidate, then the ISS, and on
+            # a Vue a VP2 ISS, which reports as "rain".
+            self.iss_id = (listening_for('wind') or listening_for('iss')
+                           or listening_for('rain')
+                           or 1)  # Pick a reasonable default.
 
         log.debug("ISS ID is %s", self.iss_id)
 
